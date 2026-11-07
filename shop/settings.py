@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = os.environ.get('DEBUG', 'False').strip().lower() in {'true', '1', 'yes', 'on'}
 SECRET_KEY = os.environ.get('SECRET_KEY', '')
 if not SECRET_KEY:
-    if os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
+    if not DEBUG:
         raise ImproperlyConfigured('SECRET_KEY must be configured when DEBUG=False.')
     SECRET_KEY = 'django-insecure-local-development-key-do-not-use-in-production'
 
@@ -148,6 +148,38 @@ CACHES = {
 }
 
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = os.environ.get(
+        'SECURE_SSL_REDIRECT', 'True'
+    ).strip().lower() in {'true', '1', 'yes', 'on'}
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+            'level': 'ERROR',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
