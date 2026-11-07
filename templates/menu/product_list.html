@@ -1,0 +1,217 @@
+{% extends 'manager/base_manager.html' %}
+{% load currency %}
+
+{% block title %}Quản lý Menu - Hoa quả Sơn{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-6 mb-2 mb-md-0">
+        <h3 class="fw-bold text-success mb-1">
+            <i class="bi bi-grid-fill me-2"></i>Menu Hoa Quả
+        </h3>
+        <p class="text-muted mb-0 small">Quản lý các loại hoa quả cắt sẵn, cập nhật giá và tình trạng hàng.</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{% url 'menu:product_create' %}" class="btn btn-success rounded-pill px-4 shadow-sm">
+            <i class="bi bi-plus-circle-fill me-2"></i>Thêm món mới
+        </a>
+    </div>
+</div>
+
+<!-- Thống kê nhanh & Bộ lọc tìm kiếm -->
+<div class="card mb-4">
+    <div class="card-body p-3">
+        <div class="row g-3 align-items-center">
+            <!-- Badges thống kê -->
+            <div class="col-lg-5 col-12 d-flex flex-wrap gap-2">
+                <a href="?status=all{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm {% if status_filter == 'all' %}btn-dark{% else %}btn-outline-secondary{% endif %} rounded-pill">
+                    Tất cả ({{ total_count }})
+                </a>
+                <a href="?status=available{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm {% if status_filter == 'available' %}btn-success{% else %}btn-outline-success{% endif %} rounded-pill">
+                    <i class="bi bi-check-circle me-1"></i>Còn hàng ({{ available_count }})
+                </a>
+                <a href="?status=unavailable{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm {% if status_filter == 'unavailable' %}btn-danger{% else %}btn-outline-danger{% endif %} rounded-pill">
+                    <i class="bi bi-x-circle me-1"></i>Hết hàng ({{ unavailable_count }})
+                </a>
+                <a href="?status=combo{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm {% if status_filter == 'combo' %}btn-warning text-dark{% else %}btn-outline-warning text-dark{% endif %} rounded-pill">
+                    <i class="bi bi-star-fill me-1"></i>Hộp mix
+                </a>
+            </div>
+
+            <!-- Ô tìm kiếm -->
+            <div class="col-lg-7 col-12">
+                <form method="get" class="d-flex gap-2">
+                    {% if status_filter != 'all' %}
+                        <input type="hidden" name="status" value="{{ status_filter }}">
+                    {% endif %}
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Tìm theo tên món hoặc mô tả..." value="{{ query }}">
+                    </div>
+                    <button type="submit" class="btn btn-outline-success px-3">Tìm</button>
+                    {% if query or status_filter != 'all' %}
+                        <a href="{% url 'menu:product_list' %}" class="btn btn-outline-secondary" title="Xóa bộ lọc">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Danh sách món dạng Grid Cards -->
+{% if products %}
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        {% for product in products %}
+            <div class="col">
+                <div class="card h-100 position-relative {% if not product.is_available %}border-danger border-opacity-25 bg-light{% endif %}">
+                    <!-- Ảnh món hoặc placeholder -->
+                    <div class="product-img-box position-relative overflow-hidden">
+                        {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-100 h-100" style="object-fit: cover;">
+                        {% else %}
+                            <div class="text-center text-muted">
+                                <i class="bi bi-basket fs-1 text-success opacity-75"></i>
+                                <div class="small mt-1">Chưa có ảnh</div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Badge trạng thái nổi trên ảnh -->
+                        <div class="position-absolute top-0 end-0 m-2">
+                            {% if product.is_combo %}
+                                <span class="badge badge-combo shadow-sm me-1">
+                                    <i class="bi bi-layers-half me-1"></i>Mix đồng giá
+                                </span>
+                            {% endif %}
+                            <span class="badge {% if product.is_available %}bg-success{% else %}bg-danger{% endif %} shadow-sm" id="badge-status-{{ product.id }}">
+                                {% if product.is_available %}Còn hàng{% else %}Hết hàng{% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Nội dung card -->
+                    <div class="card-body d-flex flex-column p-3">
+                        <h5 class="card-title fw-bold text-dark mb-1 text-truncate" title="{{ product.name }}">
+                            {{ product.name }}
+                        </h5>
+                        
+                        <div class="d-flex align-items-baseline gap-2 mb-2">
+                            <span class="fs-5 fw-bold text-success">{{ product.price|vnd }}</span>
+                            {% if product.cost_price %}
+                                <span class="text-muted small" title="Giá vốn / giá nhập">
+                                    <i class="bi bi-box-seam me-1"></i>Vốn: {{ product.cost_price|vnd }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <p class="card-text text-muted small flex-grow-1 mb-3" style="min-height: 40px;">
+                            {{ product.description|default:"Chưa có mô tả chi tiết."|truncatewords:15 }}
+                        </p>
+
+                        <!-- Các nút thao tác -->
+                        <div class="border-top pt-3 d-flex flex-column gap-2">
+                            <!-- Nút gạt bật/tắt nhanh Còn hàng / Hết hàng -->
+                            <form action="{% url 'menu:product_toggle_status' product.id %}" method="post" class="w-100 toggle-form" data-product-id="{{ product.id }}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm w-100 {% if product.is_available %}btn-outline-danger{% else %}btn-outline-success{% endif %} rounded-pill py-1 d-flex align-items-center justify-content-center gap-2 toggle-btn">
+                                    {% if product.is_available %}
+                                        <i class="bi bi-toggle-on fs-6"></i> <span>Chuyển sang Hết hàng</span>
+                                    {% else %}
+                                        <i class="bi bi-toggle-off fs-6"></i> <span>Mở bán lại (Còn hàng)</span>
+                                    {% endif %}
+                                </button>
+                            </form>
+
+                            <!-- Nút sửa & xóa -->
+                            <div class="d-flex justify-content-between align-items-center">
+                                <a href="{% url 'menu:product_update' product.id %}" class="btn btn-outline-primary btn-sm px-3 rounded-pill">
+                                    <i class="bi bi-pencil-square me-1"></i>Sửa
+                                </a>
+                                <a href="{% url 'menu:product_delete' product.id %}" class="btn btn-outline-secondary btn-sm px-3 rounded-pill text-danger">
+                                    <i class="bi bi-trash me-1"></i>Xóa
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card p-5 text-center">
+        <div class="py-4">
+            <i class="bi bi-emoji-neutral fs-1 text-muted"></i>
+            <h5 class="mt-3 text-secondary">Không tìm thấy món hoa quả nào</h5>
+            <p class="text-muted small">
+                {% if query %}
+                    Không có kết quả cho từ khóa "<strong>{{ query }}</strong>". Thử tìm từ khóa khác hoặc xóa bộ lọc.
+                {% else %}
+                    Menu hiện tại đang trống. Hãy thêm món hoa quả mới hoặc chạy lệnh seed dữ liệu mẫu!
+                {% endif %}
+            </p>
+            <div class="d-flex justify-content-center gap-2 mt-3">
+                {% if query or status_filter != 'all' %}
+                    <a href="{% url 'menu:product_list' %}" class="btn btn-outline-secondary rounded-pill">Xem tất cả menu</a>
+                {% endif %}
+                <a href="{% url 'menu:product_create' %}" class="btn btn-success rounded-pill px-4">
+                    <i class="bi bi-plus-circle me-1"></i>Thêm món mới ngay
+                </a>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Thao tác đổi nhanh trạng thái Còn / Hết hàng bằng AJAX mượt mà
+document.querySelectorAll('.toggle-form').forEach(form => {
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const actionUrl = this.getAttribute('action');
+        const productId = this.getAttribute('data-product-id');
+        const btn = this.querySelector('.toggle-btn');
+        const badge = document.getElementById(`badge-status-${productId}`);
+        const card = this.closest('.card');
+
+        try {
+            const response = await fetch(actionUrl, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.is_available) {
+                    // Chuyển sang còn hàng
+                    badge.className = 'badge bg-success shadow-sm';
+                    badge.textContent = 'Còn hàng';
+                    btn.className = 'btn btn-sm w-100 btn-outline-danger rounded-pill py-1 d-flex align-items-center justify-content-center gap-2 toggle-btn';
+                    btn.innerHTML = '<i class="bi bi-toggle-on fs-6"></i> <span>Chuyển sang Hết hàng</span>';
+                    card.classList.remove('border-danger', 'border-opacity-25', 'bg-light');
+                } else {
+                    // Chuyển sang hết hàng
+                    badge.className = 'badge bg-danger shadow-sm';
+                    badge.textContent = 'Hết hàng';
+                    btn.className = 'btn btn-sm w-100 btn-outline-success rounded-pill py-1 d-flex align-items-center justify-content-center gap-2 toggle-btn';
+                    btn.innerHTML = '<i class="bi bi-toggle-off fs-6"></i> <span>Mở bán lại (Còn hàng)</span>';
+                    card.classList.add('border-danger', 'border-opacity-25', 'bg-light');
+                }
+            } else {
+                // Fallback nếu AJAX lỗi thì submit bình thường
+                form.submit();
+            }
+        } catch (err) {
+            form.submit();
+        }
+    });
+});
+</script>
+{% endblock %}
+

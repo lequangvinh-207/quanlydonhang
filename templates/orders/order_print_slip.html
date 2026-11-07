@@ -1,0 +1,58 @@
+{% load currency %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Phiếu đơn #{{ order.code }} - Hoa quả Sơn</title>
+    <style>
+        * { box-sizing: border-box; border-radius: 0 !important; }
+        body { margin: 0; color: #111; font: 14px/1.4 Arial, sans-serif; }
+        .slip { width: 80mm; max-width: 100%; margin: 0 auto; padding: 8px; }
+        h1 { margin: 0 0 4px; font-size: 18px; text-align: center; }
+        .center { text-align: center; }
+        .rule { border-top: 1px dashed #555; margin: 8px 0; }
+        .row { display: flex; justify-content: space-between; gap: 8px; }
+        .item { padding: 5px 0; border-bottom: 1px dotted #aaa; }
+        .note { padding-left: 8px; font-size: 12px; }
+        .amount { margin-top: 10px; padding: 8px; border: 2px solid #111; text-align: center; font-size: 20px; font-weight: 700; }
+        .toolbar { width: 80mm; max-width: 100%; margin: 8px auto; }
+        button { width: 100%; padding: 10px; font-size: 16px; }
+        @media print {
+            .toolbar { display: none; }
+            .slip { width: 80mm; margin: 0; padding: 0; }
+            @page { size: 80mm auto; margin: 4mm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar"><button type="button" onclick="window.print()">In phiếu</button></div>
+    <main class="slip">
+        <h1>HOA QUẢ SƠN</h1>
+        <div class="center">PHIẾU ĐƠN HÀNG · #{{ order.code }}</div>
+        <div class="center">{{ order.created_at|date:"d/m/Y H:i" }}</div>
+        <div class="rule"></div>
+        <div><strong>Khách:</strong> {{ order.customer_name }}</div>
+        {% if order.phone_link %}
+            <div><strong>SĐT:</strong> <a href="tel:{{ order.phone_link }}">{{ order.customer_contact }}</a></div>
+        {% elif order.customer_contact %}
+            <div><strong>Liên hệ:</strong> {{ order.customer_contact }}</div>
+        {% endif %}
+        {% if order.address %}<div><strong>Địa chỉ:</strong> {{ order.address }}</div>{% endif %}
+        {% if order.desired_time %}<div><strong>Thời gian:</strong> {{ order.desired_time }}</div>{% endif %}
+        <div class="rule"></div>
+        {% for item in order.items.all %}
+            <div class="item">
+                <div class="row"><strong>{{ item.product_name }} × {{ item.quantity }}</strong><strong>{{ item.subtotal|vnd }}</strong></div>
+                {% if item.note %}<div class="note">Ghi chú: {{ item.note }}</div>{% endif %}
+                {% if item.salt_choice %}<div class="note">Muối: {{ item.get_salt_choice_display }}</div>{% endif %}
+            </div>
+        {% endfor %}
+        {% if order.note %}<div class="item"><strong>Ghi chú đơn:</strong> {{ order.note }}</div>{% endif %}
+        <div class="row" style="margin-top: 8px;"><span>Phí giao hàng</span><strong>{{ order.shipping_fee|vnd }}</strong></div>
+        <div class="amount">
+            {% if order.is_paid %}ĐÃ THANH TOÁN{% else %}CẦN THU: {{ order.final_total|vnd }}{% endif %}
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,104 @@
+{% extends 'manager/base_manager.html' %}
+
+{% block title %}Chỉnh sửa đơn #{{ order.code }} - Hoa quả Sơn{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <a href="{% url 'orders:order_detail' order.id %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại đơn hàng
+            </a>
+            <span class="text-muted small">Cập nhật thông tin đơn #{{ order.code }}</span>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white py-3 rounded-top-3">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa thông tin đơn hàng #{{ order.code }}
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% if form.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            Vui lòng kiểm tra lại thông tin:
+                            {{ form.errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.customer_name.label }}</label>
+                            {{ form.customer_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.customer_contact.label }}</label>
+                            {{ form.customer_contact }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">{{ form.address.label }}</label>
+                        {{ form.address }}
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">{{ form.order_type.label }}</label>
+                            {{ form.order_type }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">{{ form.payment_method.label }}</label>
+                            {{ form.payment_method }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">{{ form.status.label }}</label>
+                            {{ form.status }}
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3 p-3 bg-light rounded-3 border">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">{{ form.discount_type.label }}</label>
+                            {{ form.discount_type }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">{{ form.discount_value.label }}</label>
+                            {{ form.discount_value }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">{{ form.shipping_fee.label }}</label>
+                            {{ form.shipping_fee }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3 p-3 bg-light rounded-3 border">
+                        <div class="form-check form-switch">
+                            {{ form.is_paid }}
+                            <label class="form-check-label fw-semibold text-dark" for="is_paid">
+                                {{ form.is_paid.label }}
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">{{ form.note.label }}</label>
+                        {{ form.note }}
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a href="{% url 'orders:order_detail' order.id %}" class="btn btn-outline-secondary px-4 rounded-pill">
+                            Hủy bỏ
+                        </a>
+                        <button type="submit" class="btn btn-success px-4 rounded-pill shadow-sm">
+                            <i class="bi bi-check2-circle me-1"></i>Lưu thay đổi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,399 @@
+{% extends 'manager/base_manager.html' %}
+{% load currency %}
+
+{% block title %}Bán hàng (POS) & Tạo đơn - Hoa quả Sơn{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- CỘT TRÁI: MENU HOA QUẢ CÒN HÀNG -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fs-5 text-success"><i class="bi bi-grid-fill"></i></span>
+                    <h5 class="mb-0 fw-bold text-dark">Menu Hoa Quả</h5>
+                    <span class="badge bg-light text-muted border">{{ products|length }} món có sẵn</span>
+                </div>
+                <div class="w-100 w-sm-auto mt-2 mt-sm-0" style="max-width: 280px;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" id="productSearchInput" class="form-control border-start-0 ps-0" placeholder="Tìm nhanh món...">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-3" style="max-height: 75vh; overflow-y: auto;">
+                {% if products %}
+                    <div class="row row-cols-2 row-cols-md-3 g-3" id="productGrid">
+                        {% for product in products %}
+                            <div class="col product-card-col" data-name="{{ product.name|lower }}">
+                                <div class="card h-100 product-pos-card border cursor-pointer position-relative" 
+                                     onclick="addToCart({{ product.id }}, '{{ product.name|escapejs }}', {{ product.price }}, {{ product.is_combo|yesno:'true,false' }})"
+                                     style="cursor: pointer; transition: all 0.15s ease;">
+                                    
+                                    <!-- Ảnh / Thumbnail -->
+                                    <div class="pos-img-box text-center position-relative overflow-hidden" style="height: 110px; background-color: var(--pink-light); border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                                        {% if product.image %}
+                                            <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-100 h-100" style="object-fit: cover;">
+                                        {% else %}
+                                            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                                                <i class="bi bi-basket2 fs-2 text-success opacity-75"></i>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        {% if product.is_combo %}
+                                            <span class="badge badge-combo position-absolute top-0 end-0 m-1 shadow-sm" style="font-size: 0.7rem;">
+                                                Mix đồng giá
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Thông tin món -->
+                                    <div class="p-2 text-center d-flex flex-column justify-content-between flex-grow-1">
+                                        <div class="fw-bold small text-dark text-truncate mb-1" title="{{ product.name }}">
+                                            {{ product.name }}
+                                        </div>
+                                        <div class="fw-bold text-success" style="font-size: 0.95rem;">
+                                            {{ product.price|vnd }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-exclamation-circle fs-1 text-secondary"></i>
+                        <h6 class="mt-2">Hiện chưa có món nào đang bật "Còn hàng"</h6>
+                        <a href="{% url 'menu:product_list' %}" class="btn btn-sm btn-outline-success rounded-pill mt-2">
+                            Đến trang Quản lý Menu để mở bán món
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- CỘT PHẢI: GIỎ ĐƠN HÀNG VÀ THANH TOÁN -->
+    <div class="col-lg-5">
+        <form method="post" id="orderForm">
+            {% csrf_token %}
+            <input type="hidden" name="cart_data" id="cartDataInput" value="[]">
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fs-5 text-success"><i class="bi bi-cart3"></i></span>
+                        <h5 class="mb-0 fw-bold text-dark">Giỏ Đơn Hàng</h5>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill" onclick="clearCart()">
+                        <i class="bi bi-trash me-1"></i>Xóa giỏ
+                    </button>
+                </div>
+
+                <div class="card-body p-3">
+                    <!-- Danh sách món đã chọn -->
+                    <div id="cartItemsContainer" style="max-height: 280px; overflow-y: auto;" class="mb-3">
+                        <div id="emptyCartMessage" class="text-center py-4 text-muted">
+                            <i class="bi bi-basket3 fs-2 opacity-50"></i>
+                            <div class="small mt-2">Chưa có món nào trong đơn.<br>Nhấp vào hoa quả bên trái để thêm!</div>
+                        </div>
+                    </div>
+
+                    <!-- THÔNG TIN KHÁCH HÀNG & PHỤC VỤ -->
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <h6 class="fw-bold text-dark mb-2 small"><i class="bi bi-person-fill me-1 text-success"></i>Thông tin nhận hàng</h6>
+                        
+                        <div class="row g-2 mb-2">
+                            <div class="col-7">
+                                <input type="text" name="customer_name" class="form-control form-control-sm" placeholder="Tên khách hàng" value="Khách lẻ">
+                            </div>
+                            <div class="col-5">
+                                <input type="text" name="customer_contact" class="form-control form-control-sm" placeholder="SĐT / Zalo / FB">
+                            </div>
+                        </div>
+
+                        <!-- Hình thức phục vụ -->
+                        <div class="mb-2">
+                            <div class="d-flex gap-2">
+                                <input type="radio" class="btn-check" name="order_type" id="type_dine_in" value="dine_in" checked onchange="toggleAddressField()">
+                                <label class="btn btn-sm btn-outline-success flex-fill rounded-pill py-1" for="type_dine_in">
+                                    <i class="bi bi-cup-straw me-1"></i>Tại chỗ
+                                </label>
+
+                                <input type="radio" class="btn-check" name="order_type" id="type_takeaway" value="takeaway" onchange="toggleAddressField()">
+                                <label class="btn btn-sm btn-outline-success flex-fill rounded-pill py-1" for="type_takeaway">
+                                    <i class="bi bi-bag-check me-1"></i>Mang đi
+                                </label>
+
+                                <input type="radio" class="btn-check" name="order_type" id="type_delivery" value="delivery" onchange="toggleAddressField()">
+                                <label class="btn btn-sm btn-outline-success flex-fill rounded-pill py-1" for="type_delivery">
+                                    <i class="bi bi-bicycle me-1"></i>Giao hàng
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Địa chỉ (hiện khi giao hàng hoặc có thể nhập thêm) -->
+                        <div id="addressBox" class="mb-2" style="display: none;">
+                            <input type="text" name="address" class="form-control form-control-sm" placeholder="Địa chỉ giao hàng chi tiết...">
+                        </div>
+
+                        <!-- Ghi chú đơn -->
+                        <div>
+                            <input type="text" name="note" class="form-control form-control-sm" placeholder="Ghi chú đơn hàng (VD: Mang thêm dĩa, giao gấp...)">
+                        </div>
+                    </div>
+
+                    <!-- GIẢM GIÁ & SHIP & THANH TOÁN -->
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-6">
+                                <label class="form-label small mb-1 text-muted">Giảm giá</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="discountValue" name="discount_value" class="form-control" value="0" min="0" oninput="calculateTotal()">
+                                    <select name="discount_type" id="discountType" class="form-select" style="max-width: 65px;" onchange="calculateTotal()">
+                                        <option value="amount">đ</option>
+                                        <option value="percent">%</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small mb-1 text-muted">Phí giao hàng</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="shippingFee" name="shipping_fee" class="form-control" value="0" min="0" oninput="calculateTotal()">
+                                    <span class="input-group-text">đ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 align-items-center pt-2 border-top">
+                            <div class="col-6">
+                                <label class="form-label small mb-1 text-muted">Thanh toán</label>
+                                <select name="payment_method" class="form-select form-select-sm">
+                                    <option value="cash">Tiền mặt</option>
+                                    <option value="transfer">Chuyển khoản</option>
+                                </select>
+                            </div>
+                            <div class="col-6 pt-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="is_paid" id="isPaid" checked>
+                                    <label class="form-check-label small fw-bold text-dark" for="isPaid">Đã thanh toán</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TỔNG KẾT TIỀN ĐƠN HÀNG -->
+                    <div class="border-top pt-2 mb-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Tiền hàng:</span>
+                            <span id="subtotalDisplay" class="fw-semibold">0đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Giảm giá:</span>
+                            <span id="discountDisplay" class="text-danger">-0đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Phí giao hàng:</span>
+                            <span id="shippingDisplay">0đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-baseline pt-2 border-top">
+                            <span class="fw-bold fs-6 text-dark">TỔNG THANH TOÁN:</span>
+                            <span id="finalTotalDisplay" class="fs-4 fw-bold text-success">0đ</span>
+                        </div>
+                    </div>
+
+                    <!-- NÚT LƯU ĐƠN -->
+                    <button type="submit" class="btn btn-success w-100 rounded-pill py-2 fw-bold shadow-sm" id="btnSubmitOrder">
+                        <i class="bi bi-check2-circle me-1"></i>Lưu đơn & In hóa đơn
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Quản lý giỏ hàng phía Client
+let cart = [];
+
+// Thêm món vào giỏ
+function addToCart(productId, name, price, isCombo) {
+    const defaultNote = isCombo ? "Mix các loại quả theo yêu cầu" : "";
+    const existingIndex = cart.findIndex(item => item.product_id === productId && item.note === defaultNote);
+    
+    if (existingIndex > -1) {
+        cart[existingIndex].quantity += 1;
+    } else {
+        cart.push({
+            product_id: productId,
+            name: name,
+            price: Number(price),
+            quantity: 1,
+            is_combo: isCombo,
+            note: defaultNote
+        });
+    }
+
+    renderCart();
+}
+
+// Cập nhật số lượng
+function updateQuantity(index, delta) {
+    if (cart[index]) {
+        cart[index].quantity += delta;
+        if (cart[index].quantity <= 0) {
+            cart.splice(index, 1);
+        }
+    }
+    renderCart();
+}
+
+// Xóa 1 món khỏi giỏ
+function removeCartItem(index) {
+    cart.splice(index, 1);
+    renderCart();
+}
+
+// Cập nhật ghi chú từng món
+function updateItemNote(index, noteText) {
+    if (cart[index]) {
+        cart[index].note = noteText;
+        document.getElementById('cartDataInput').value = JSON.stringify(cart);
+    }
+}
+
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, function(character) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[character];
+    });
+}
+
+// Xóa trắng toàn bộ giỏ
+function clearCart() {
+    if (cart.length > 0 && confirm("Bạn có chắc muốn xóa sạch giỏ hàng hiện tại?")) {
+        cart = [];
+        renderCart();
+    }
+}
+
+// Render giao diện giỏ hàng
+function renderCart() {
+    const container = document.getElementById('cartItemsContainer');
+    const emptyMsg = document.getElementById('emptyCartMessage');
+    const submitBtn = document.getElementById('btnSubmitOrder');
+
+    if (cart.length === 0) {
+        container.innerHTML = `
+            <div id="emptyCartMessage" class="text-center py-4 text-muted">
+                <i class="bi bi-basket3 fs-2 opacity-50"></i>
+                <div class="small mt-2">Chưa có món nào trong đơn.<br>Nhấp vào hoa quả bên trái để thêm!</div>
+            </div>
+        `;
+        submitBtn.disabled = true;
+    } else {
+        submitBtn.disabled = false;
+        let html = '';
+        cart.forEach((item, index) => {
+            const itemTotal = item.price * item.quantity;
+            html += `
+                <div class="p-2 mb-2 bg-white rounded-3 border">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <div class="fw-bold text-dark text-truncate me-2" style="max-width: 170px;">
+                            ${escapeHtml(item.name)}
+                            ${item.is_combo ? '<span class="badge badge-combo ms-1" style="font-size:0.65rem;">Mix</span>' : ''}
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="fw-bold text-success small me-2">${formatVND(itemTotal)}</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-2 rounded-pill" onclick="updateQuantity(${index}, -1)">-</button>
+                            <span class="px-1 fw-bold small">${item.quantity}</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-2 rounded-pill" onclick="updateQuantity(${index}, 1)">+</button>
+                            <button type="button" class="btn btn-sm text-danger p-0 ms-1" onclick="removeCartItem(${index})" title="Xóa món">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <input type="text" class="form-control form-control-sm border-0 bg-light py-1 text-muted" 
+                               style="font-size: 0.78rem;" 
+                               placeholder="${item.is_combo ? 'Ghi chú loại quả chọn vào hộp mix...' : 'Ghi chú món (VD: không dưa hấu, thêm muối...)'}" 
+                               value="${escapeHtml(item.note || '')}" 
+                               oninput="updateItemNote(${index}, this.value)">
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    // Ghi đè vào input hidden gửi lên server
+    document.getElementById('cartDataInput').value = JSON.stringify(cart);
+    calculateTotal();
+}
+
+// Tính toán tổng tiền
+function calculateTotal() {
+    let subtotal = 0;
+    cart.forEach(item => {
+        subtotal += item.price * item.quantity;
+    });
+
+    const discountType = document.getElementById('discountType').value;
+    const discountVal = Math.max(0, Number(document.getElementById('discountValue').value) || 0);
+    const shippingFee = Math.max(0, Number(document.getElementById('shippingFee').value) || 0);
+
+    let discountAmount = 0;
+    if (discountType === 'percent') {
+        discountAmount = Math.min(subtotal, (subtotal * discountVal) / 100);
+    } else {
+        discountAmount = Math.min(subtotal, discountVal);
+    }
+
+    const finalTotal = Math.max(0, subtotal - discountAmount) + shippingFee;
+
+    document.getElementById('subtotalDisplay').textContent = formatVND(subtotal);
+    document.getElementById('discountDisplay').textContent = '-' + formatVND(discountAmount);
+    document.getElementById('shippingDisplay').textContent = formatVND(shippingFee);
+    document.getElementById('finalTotalDisplay').textContent = formatVND(finalTotal);
+}
+
+// Ẩn hiện ô địa chỉ theo hình thức
+function toggleAddressField() {
+    const isDelivery = document.getElementById('type_delivery').checked;
+    document.getElementById('addressBox').style.display = isDelivery ? 'block' : 'none';
+}
+
+// Format VND: 25000 -> 25.000đ
+function formatVND(val) {
+    return Math.round(val).toLocaleString('vi-VN') + 'đ';
+}
+
+// Tìm kiếm nhanh món hoa quả phía client
+document.getElementById('productSearchInput').addEventListener('input', function() {
+    const keyword = this.value.toLowerCase().trim();
+    const items = document.querySelectorAll('.product-card-col');
+    items.forEach(item => {
+        const name = item.getAttribute('data-name');
+        if (name.includes(keyword)) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+
+// Khởi chạy khi load trang
+document.addEventListener('DOMContentLoaded', function() {
+    renderCart();
+    toggleAddressField();
+});
+</script>
+{% endblock %}

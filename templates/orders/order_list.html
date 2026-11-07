@@ -1,0 +1,596 @@
+{% extends 'manager/base_manager.html' %}
+{% load currency %}
+{% load static %}
+
+{% block title %}Quản lý Đơn hàng - Hoa quả Sơn{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4" id="orderListStatus"
+     data-latest-new-order-id="{{ latest_new_order_id }}"
+     data-new-order-count="{{ new_order_count|default:0 }}"
+     data-base-title="Quản lý Đơn hàng - Hoa quả Sơn">
+    <div class="col-md-6 mb-2 mb-md-0">
+        <h3 class="fw-bold text-success mb-1">
+            <i class="bi bi-receipt me-2"></i>Quản Lý Đơn Hàng
+        </h3>
+        <p class="text-muted mb-0 small">Theo dõi toàn bộ đơn hàng, cập nhật trạng thái đơn và dòng tiền.</p>
+        <small class="text-muted">Giữ tab này mở để nhận âm báo đơn mới.</small>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{% url 'orders:order_create' %}" class="btn btn-success rounded-pill px-4 shadow-sm">
+            <i class="bi bi-plus-circle-fill me-2"></i>Tạo đơn bán hàng
+        </a>
+    </div>
+</div>
+
+<!-- THỐNG KÊ TỔNG QUAN THEO BỘ LỌC -->
+<div class="row g-3 mb-4" id="orderListSummary">
+    <div class="col-md-6">
+        <div class="card p-3 border-0 shadow-sm bg-white d-flex flex-row align-items-center gap-3">
+            <div class="p-3 rounded-circle text-success" style="background: var(--pink-light);">
+                <i class="bi bi-receipt-cutoff fs-3"></i>
+            </div>
+            <div>
+                <div class="text-muted small">Tổng số đơn hàng (theo lọc)</div>
+                <div class="fs-4 fw-bold text-dark">{{ total_orders }} <span class="fs-6 fw-normal text-muted">đơn</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3 border-0 shadow-sm bg-white d-flex flex-row align-items-center gap-3">
+            <div class="p-3 rounded-circle text-success" style="background: var(--pink-light);">
+                <i class="bi bi-cash-coin fs-3"></i>
+            </div>
+            <div>
+                <div class="text-muted small">Doanh thu bán hàng (không tính đơn hủy)</div>
+                <div class="fs-4 fw-bold text-success">{{ total_revenue|vnd }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BỘ LỌC TÌM KIẾM ĐƠN HÀNG -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-body p-3">
+        <form method="get" class="row g-2 align-items-end">
+            <!-- Tìm kiếm từ khóa -->
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label small text-muted mb-1">Tìm kiếm</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Mã đơn, tên, SĐT khách..." value="{{ query }}">
+                </div>
+            </div>
+
+            <!-- Lọc trạng thái -->
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label small text-muted mb-1">Trạng thái</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Tất cả trạng thái</option>
+                    <option value="new" {% if status_filter == 'new' %}selected{% endif %}>Mới</option>
+                    <option value="preparing" {% if status_filter == 'preparing' %}selected{% endif %}>Đang chuẩn bị</option>
+                    <option value="delivering" {% if status_filter == 'delivering' %}selected{% endif %}>Đang giao</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Hoàn thành</option>
+                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Đã hủy</option>
+                    <option value="customer_refused" {% if status_filter == 'customer_refused' %}selected{% endif %}>Khách không nhận</option>
+                </select>
+            </div>
+
+            <!-- Lọc hình thức -->
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label small text-muted mb-1">Hình thức</label>
+                <select name="order_type" class="form-select form-select-sm">
+                    <option value="all" {% if type_filter == 'all' %}selected{% endif %}>Tất cả hình thức</option>
+                    <option value="dine_in" {% if type_filter == 'dine_in' %}selected{% endif %}>Tại chỗ</option>
+                    <option value="takeaway" {% if type_filter == 'takeaway' %}selected{% endif %}>Mang đi</option>
+                    <option value="delivery" {% if type_filter == 'delivery' %}selected{% endif %}>Giao hàng</option>
+                </select>
+            </div>
+
+            <!-- Lọc thanh toán -->
+            <div class="col-lg-2 col-md-4 col-6">
+                <label class="form-label small text-muted mb-1">Thanh toán</label>
+                <select name="is_paid" class="form-select form-select-sm">
+                    <option value="all" {% if payment_status == 'all' %}selected{% endif %}>Tất cả</option>
+                    <option value="paid" {% if payment_status == 'paid' %}selected{% endif %}>Đã thanh toán</option>
+                    <option value="unpaid" {% if payment_status == 'unpaid' %}selected{% endif %}>Chưa thanh toán</option>
+                </select>
+            </div>
+
+            <!-- Lọc thời gian -->
+            <div class="col-lg-2 col-md-4 col-6">
+                <label class="form-label small text-muted mb-1">Thời gian</label>
+                <select name="date_filter" id="dateFilterSelect" class="form-select form-select-sm" onchange="toggleCustomDateInputs()">
+                    <option value="all" {% if date_filter == 'all' %}selected{% endif %}>Tất cả các ngày</option>
+                    <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Hôm nay</option>
+                    <option value="yesterday" {% if date_filter == 'yesterday' %}selected{% endif %}>Hôm qua</option>
+                    <option value="7days" {% if date_filter == '7days' %}selected{% endif %}>7 ngày qua</option>
+                    <option value="custom" {% if date_filter == 'custom' %}selected{% endif %}>Tùy chọn ngày...</option>
+                </select>
+            </div>
+
+            <!-- Nút Lọc & Reset -->
+            <div class="col-lg-1 col-md-4 col-12 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-outline-success flex-grow-1">Lọc</button>
+                <a href="{% url 'orders:order_list' %}" class="btn btn-sm btn-outline-secondary" title="Đặt lại bộ lọc">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+
+            <!-- Ô nhập ngày tùy chọn nếu chọn custom -->
+            <div class="col-12 mt-2" id="customDateRow" style="display: {% if date_filter == 'custom' %}flex{% else %}none{% endif %};">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small text-muted">Từ ngày:</span>
+                    <input type="date" name="start_date" class="form-control form-control-sm" style="max-width: 150px;" value="{{ start_date }}">
+                    <span class="small text-muted">Đến ngày:</span>
+                    <input type="date" name="end_date" class="form-control form-control-sm" style="max-width: 150px;" value="{{ end_date }}">
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- BẢNG DANH SÁCH ĐƠN HÀNG -->
+<div class="card shadow-sm overflow-hidden">
+    {% if orders %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small">
+                    <tr>
+                        <th class="ps-3">Mã đơn</th>
+                        <th>Ngày giờ</th>
+                        <th>Khách hàng</th>
+                        <th>Món đặt</th>
+                        <th class="text-end">Tổng tiền</th>
+                        <th>Thanh toán</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end pe-3">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                        <tr class="{% if order.status == 'new' %}table-warning{% endif %}">
+                            <!-- Mã đơn -->
+                            <td class="ps-3 fw-bold">
+                                <a href="{% url 'orders:order_detail' order.id %}" class="text-decoration-none text-dark hover-pink">
+                                    #{{ order.code }}
+                                </a>
+                            </td>
+
+                            <!-- Ngày giờ -->
+                            <td class="small text-muted">
+                                <div>{{ order.created_at|date:"d/m/Y" }}</div>
+                                <div style="font-size: 0.75rem;">{{ order.created_at|date:"H:i" }}</div>
+                            </td>
+
+                            <!-- Khách hàng -->
+                            <td>
+                                <div class="fw-semibold text-dark text-truncate" style="max-width: 140px;">
+                                    {{ order.customer_name }}
+                                </div>
+                                <div class="small text-muted">
+                                    <span class="badge bg-light text-dark border">{{ order.get_order_type_display }}</span>
+                                    <span class="badge bg-info text-dark">{{ order.get_source_display }}</span>
+                                    {% if order.customer_contact %}
+                                        <span class="ms-1" style="font-size: 0.75rem;">
+                                            {% if order.phone_link %}<a href="tel:{{ order.phone_link }}">{{ order.customer_contact }}</a>{% else %}{{ order.customer_contact }}{% endif %}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- Món đặt -->
+                            <td class="small">
+                                <span class="badge bg-light text-dark border">
+                                    {{ order.items.count }} món ({{ order.total_quantity }} hộp)
+                                </span>
+                            </td>
+
+                            <!-- Tổng tiền -->
+                            <td class="text-end fw-bold text-success">
+                                {{ order.final_total|vnd }}
+                                {% if not order.is_paid and order.status != 'cancelled' and order.status != 'customer_refused' %}
+                                    <div class="small text-danger fw-bold">Cần thu: {{ order.final_total|vnd }}</div>
+                                {% endif %}
+                            </td>
+
+                            <!-- Thanh toán -->
+                            <td>
+                                {% if order.is_paid %}
+                                    <span class="badge bg-success shadow-sm">Đã thanh toán</span>
+                                {% else %}
+                                    <span class="badge bg-danger shadow-sm">Chưa trả tiền</span>
+                                    {% if order.status != 'cancelled' and order.status != 'customer_refused' %}
+                                        <form action="{% url 'orders:order_mark_paid' order.id %}" method="post" class="mt-2">
+                                            {% csrf_token %}
+                                            <label class="form-check small mb-1">
+                                                <input class="form-check-input" type="checkbox" name="is_paid" required>
+                                                <span class="form-check-label">Đã thu tiền</span>
+                                            </label>
+                                            <select class="form-select form-select-sm mb-1" name="payment_method" aria-label="Hình thức thu tiền">
+                                                <option value="cash">Tiền mặt</option>
+                                                <option value="transfer">Chuyển khoản</option>
+                                            </select>
+                                            <button class="btn btn-sm btn-outline-success w-100" type="submit">Xác nhận thu</button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                                <div class="text-muted" style="font-size: 0.7rem;">{{ order.get_payment_method_display }}</div>
+                            </td>
+
+                            <!-- Trạng thái & Nút đổi nhanh 1 chạm -->
+                            <td>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm rounded-pill px-2 py-0 dropdown-toggle 
+                                        {% if order.status == 'new' %}btn-primary
+                                        {% elif order.status == 'preparing' %}btn-warning text-dark
+                                        {% elif order.status == 'delivering' %}btn-info text-white
+                                        {% elif order.status == 'completed' %}btn-success
+                                        {% elif order.status == 'customer_refused' %}btn-danger
+                                        {% else %}btn-secondary{% endif %}" 
+                                        data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.78rem;">
+                                        {{ order.get_status_display }}
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.85rem;">
+                                        <li><h6 class="dropdown-header small">Đổi trạng thái:</h6></li>
+                                        <li>
+                                            <form action="{% url 'orders:order_change_status' order.id %}" method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="new">
+                                                <button type="submit" class="dropdown-item {% if order.status == 'new' %}active{% endif %}">Mới</button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form action="{% url 'orders:order_change_status' order.id %}" method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="preparing">
+                                                <button type="submit" class="dropdown-item {% if order.status == 'preparing' %}active{% endif %}">Đang chuẩn bị</button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form action="{% url 'orders:order_change_status' order.id %}" method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="delivering">
+                                                <button type="submit" class="dropdown-item {% if order.status == 'delivering' %}active{% endif %}">Đang giao</button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form action="{% url 'orders:order_change_status' order.id %}" method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="completed">
+                                                <button type="submit" class="dropdown-item {% if order.status == 'completed' %}active{% endif %}">Hoàn thành</button>
+                                            </form>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form action="{% url 'orders:order_change_status' order.id %}" method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="customer_refused">
+                                                <button type="submit" class="dropdown-item text-danger">Khách không nhận</button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form action="{% url 'orders:order_change_status' order.id %}" method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="cancelled">
+                                                <button type="submit" class="dropdown-item text-danger">Hủy đơn</button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+
+                            <!-- Thao tác -->
+                            <td class="text-end pe-3">
+                                <div class="d-inline-flex gap-1">
+                                    <a href="{% url 'orders:order_invoice' order.id %}" class="btn btn-sm btn-outline-secondary rounded-circle" title="In / Xem hóa đơn" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                    <a href="{% url 'orders:order_print_slip' order.id %}" class="btn btn-sm btn-outline-success rounded-circle" title="In phiếu dán hộp" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-tag"></i>
+                                    </a>
+                                    {% if order.address %}
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" title="Sao chép địa chỉ" data-address="{{ order.address }}" onclick="copyOrderAddress(this.dataset.address)" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    {% endif %}
+                                    <a href="{% url 'orders:order_detail' order.id %}" class="btn btn-sm btn-outline-primary rounded-circle" title="Xem chi tiết" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'orders:order_update' order.id %}" class="btn btn-sm btn-outline-success rounded-circle" title="Chỉnh sửa đơn" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="p-5 text-center text-muted">
+            <i class="bi bi-inbox fs-1 text-secondary opacity-50"></i>
+            <h5 class="mt-3">Chưa có đơn hàng nào phù hợp</h5>
+            <p class="small text-muted">Thử xóa bớt bộ lọc hoặc tạo một đơn hàng mới ngay tại màn hình bán hàng!</p>
+            <a href="{% url 'orders:order_create' %}" class="btn btn-success rounded-pill px-4 mt-2">
+                <i class="bi bi-plus-circle me-1"></i>Tạo đơn bán hàng ngay
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleCustomDateInputs() {
+    const val = document.getElementById('dateFilterSelect').value;
+    document.getElementById('customDateRow').style.display = (val === 'custom') ? 'flex' : 'none';
+}
+
+function copyOrderAddress(text) {
+    function legacyCopy() {
+        const field = document.createElement('textarea');
+        field.value = text;
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        const copied = document.execCommand('copy');
+        field.remove();
+        return copied;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+            window.alert('Đã sao chép địa chỉ.');
+        }).catch(function() {
+            window.alert(legacyCopy() ? 'Đã sao chép địa chỉ.' : 'Không thể sao chép địa chỉ trên trình duyệt này.');
+        });
+    } else {
+        window.alert(legacyCopy() ? 'Đã sao chép địa chỉ.' : 'Không thể sao chép địa chỉ trên trình duyệt này.');
+    }
+}
+
+(function() {
+    const controls = document.getElementById('orderSoundControls');
+    let status = document.getElementById('orderListStatus');
+    const toggleButton = document.getElementById('orderSoundToggle');
+    const testButton = document.getElementById('orderSoundTest');
+    const hint = document.getElementById('orderSoundHint');
+    const navBadge = document.getElementById('newOrderNavBadge');
+    const enabledKey = controls ? controls.dataset.enabledStorageKey : '';
+    const latestKey = controls ? controls.dataset.lastSeenStorageKey : '';
+    const fallbackAudio = controls ? controls.dataset.fallbackAudio : '';
+    let enabled = false;
+    let unlocked = false;
+    let pendingAlert = false;
+    let audioContext = null;
+    let previousCount = status ? Number(status.dataset.newOrderCount || 0) : 0;
+    let lastSeenId = status ? status.dataset.latestNewOrderId : '';
+
+    try {
+        if (controls) enabled = localStorage.getItem(enabledKey) === 'true';
+        if (status && latestKey) localStorage.setItem(latestKey, lastSeenId || '');
+    } catch (error) {
+        console.warn('Không thể đọc hoặc lưu tùy chọn âm báo trong localStorage.', error);
+    }
+
+    function updateSoundControls() {
+        if (!controls) return;
+        toggleButton.setAttribute('aria-pressed', String(enabled));
+        if (enabled) {
+            toggleButton.innerHTML = '<i class="bi bi-volume-up-fill me-1" aria-hidden="true"></i>Tắt âm báo';
+            hint.textContent = unlocked
+                ? 'Âm báo đang bật. Bấm để tắt.'
+                : 'Âm báo đã bật; bấm bất kỳ đâu để mở khóa âm thanh.';
+        } else {
+            toggleButton.innerHTML = '<i class="bi bi-volume-mute me-1" aria-hidden="true"></i>Bật âm báo';
+            hint.textContent = 'Bấm để bật âm báo đơn mới';
+        }
+    }
+
+    function getAudioContext() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return null;
+        if (!audioContext || audioContext.state === 'closed') audioContext = new AudioContextClass();
+        return audioContext;
+    }
+
+    async function playTingTing() {
+        const context = getAudioContext();
+        if (!context) return;
+        if (context.state === 'suspended') await context.resume();
+        const start = context.currentTime;
+        [880, 1175].forEach(function(frequency, index) {
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            const noteStart = start + index * 0.22;
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequency, noteStart);
+            gain.gain.setValueAtTime(0.0001, noteStart);
+            gain.gain.exponentialRampToValueAtTime(0.16, noteStart + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.19);
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.start(noteStart);
+            oscillator.stop(noteStart + 0.2);
+        });
+        await new Promise(function(resolve) { window.setTimeout(resolve, 520); });
+    }
+
+    function getVietnameseVoice() {
+        if (!window.speechSynthesis) return Promise.resolve(null);
+        const findVoice = function() {
+            return window.speechSynthesis.getVoices().find(function(voice) {
+                return /^vi(?:-|$)/i.test(voice.lang);
+            }) || null;
+        };
+        const existingVoice = findVoice();
+        if (existingVoice) return Promise.resolve(existingVoice);
+        return new Promise(function(resolve) {
+            let finished = false;
+            const finish = function(voice) {
+                if (finished) return;
+                finished = true;
+                window.clearTimeout(timeout);
+                window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+                resolve(voice);
+            };
+            const onVoicesChanged = function() {
+                const voice = findVoice();
+                if (voice) finish(voice);
+            };
+            const timeout = window.setTimeout(function() { finish(findVoice()); }, 1200);
+            window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+        });
+    }
+
+    function playFallbackVoice() {
+        if (!fallbackAudio) return;
+        const audio = new Audio(fallbackAudio);
+        audio.onerror = function() {
+            console.info('Không tìm thấy âm thanh dự phòng cho lời đọc.');
+        };
+        audio.play().catch(function(error) {
+            console.info('Trình duyệt không phát được âm thanh dự phòng.', error);
+        });
+    }
+
+    async function playAlert() {
+        try {
+            await playTingTing();
+        } catch (error) {
+            console.warn('Không thể phát tiếng chuông bằng Web Audio API.', error);
+            return;
+        }
+        const voice = await getVietnameseVoice();
+        if (voice && window.speechSynthesis) {
+            const utterance = new SpeechSynthesisUtterance('Có đơn');
+            utterance.lang = 'vi-VN';
+            utterance.rate = 0.95;
+            utterance.voice = voice;
+            utterance.onerror = playFallbackVoice;
+            window.speechSynthesis.speak(utterance);
+        } else {
+            playFallbackVoice();
+        }
+    }
+
+    async function unlockAudio() {
+        if (!enabled || unlocked) return;
+        try {
+            const context = getAudioContext();
+            if (context && context.state === 'suspended') await context.resume();
+            unlocked = true;
+            updateSoundControls();
+            if (pendingAlert) {
+                pendingAlert = false;
+                playAlert();
+            }
+        } catch (error) {
+            console.warn('Không thể mở khóa âm thanh trên trình duyệt này.', error);
+        }
+    }
+
+    if (controls) {
+        updateSoundControls();
+        document.addEventListener('pointerdown', unlockAudio, { once: false });
+
+        toggleButton.addEventListener('click', async function() {
+            enabled = !enabled;
+            try {
+                localStorage.setItem(enabledKey, String(enabled));
+            } catch (error) {
+                console.warn('Không thể lưu trạng thái âm báo.', error);
+            }
+            if (enabled) {
+                await unlockAudio();
+                if (unlocked) playAlert();
+            } else {
+                pendingAlert = false;
+                if (window.speechSynthesis) window.speechSynthesis.cancel();
+            }
+            updateSoundControls();
+        });
+
+        testButton.addEventListener('click', async function() {
+            try {
+                const context = getAudioContext();
+                if (context && context.state === 'suspended') await context.resume();
+                unlocked = true;
+                updateSoundControls();
+                playAlert();
+            } catch (error) {
+                console.warn('Không thể chạy thử âm báo.', error);
+            }
+        });
+    }
+
+    function updateTitle(count) {
+        if (!status) return;
+        const baseTitle = status.dataset.baseTitle;
+        document.title = count > 0 ? '(' + count + ') Có đơn mới - ' + baseTitle : baseTitle;
+    }
+
+    function replaceIfPresent(current, updated) {
+        if (current && updated) current.replaceWith(updated);
+    }
+
+    async function pollOrders() {
+        try {
+            const response = await fetch(window.location.href, {
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const html = await response.text();
+            const nextDocument = new DOMParser().parseFromString(html, 'text/html');
+            const nextStatus = nextDocument.getElementById('orderListStatus');
+            if (!nextStatus) return;
+
+            const nextCount = Number(nextStatus.dataset.newOrderCount || 0);
+            const nextLatestId = nextStatus.dataset.latestNewOrderId || '';
+            const countIncreased = nextCount > previousCount;
+            const isNewOrder = countIncreased && nextLatestId && nextLatestId !== lastSeenId;
+
+            replaceIfPresent(
+                document.getElementById('orderListSummary'),
+                nextDocument.getElementById('orderListSummary')
+            );
+            replaceIfPresent(
+                document.querySelector('.card.shadow-sm.overflow-hidden'),
+                nextDocument.querySelector('.card.shadow-sm.overflow-hidden')
+            );
+            status.dataset.newOrderCount = String(nextCount);
+            status.dataset.latestNewOrderId = nextLatestId;
+            if (navBadge) {
+                navBadge.textContent = String(nextCount);
+                navBadge.hidden = nextCount === 0;
+            }
+            previousCount = nextCount;
+            if (nextLatestId) lastSeenId = nextLatestId;
+            updateTitle(nextCount);
+
+            try {
+                if (latestKey) localStorage.setItem(latestKey, lastSeenId || '');
+            } catch (error) {
+                console.warn('Không thể lưu mã đơn mới nhất đã thấy.', error);
+            }
+
+            if (isNewOrder) {
+                if (enabled && unlocked) {
+                    playAlert();
+                } else if (enabled) {
+                    pendingAlert = true;
+                }
+            }
+        } catch (error) {
+            console.warn('Không thể kiểm tra đơn mới; sẽ thử lại sau 30 giây.', error);
+        }
+    }
+
+    updateTitle(previousCount);
+    window.setInterval(pollOrders, 30000);
+})();
+</script>
+{% endblock %}

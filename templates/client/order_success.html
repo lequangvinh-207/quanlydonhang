@@ -1,0 +1,58 @@
+{% extends 'client/base_client.html' %}
+{% load currency %}
+
+{% block title %}Đặt hàng thành công - Hoa quả Sơn{% endblock %}
+
+{% block content %}
+<div class="mx-auto" style="max-width: 680px;">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-md-5">
+            <div class="text-center mb-4">
+                <div class="display-4 text-success"><i class="bi bi-check-circle-fill"></i></div>
+                <h1 class="h3 fw-bold text-success mt-2">Đặt hàng thành công!</h1>
+                <p class="text-muted mb-0">Cảm ơn bạn đã đặt hàng tại Hoa quả Sơn.</p>
+            </div>
+
+            <div class="alert alert-success">
+                Thanh toán khi nhận hàng. Hoa quả Sơn sẽ liên hệ xác nhận đơn qua SĐT của bạn.
+            </div>
+
+            <div class="d-flex justify-content-between border-bottom py-2">
+                <span>Mã đơn hàng</span><strong class="text-success">{{ order.code }}</strong>
+            </div>
+            <div class="d-flex justify-content-between border-bottom py-2">
+                <span>Người nhận</span><strong>{{ order.customer_name }}</strong>
+            </div>
+            <div class="d-flex justify-content-between border-bottom py-2">
+                <span>Số điện thoại</span><strong>{{ order.customer_contact }}</strong>
+            </div>
+            <div class="border-bottom py-2">
+                <div class="text-muted small">Địa chỉ giao hàng</div>
+                <strong>{{ order.address }}</strong>
+            </div>
+
+            <div class="mt-3">
+                <h2 class="h6 fw-bold">Tóm tắt đơn hàng</h2>
+                {% for item in order.items.all %}
+                    <div class="d-flex justify-content-between gap-3 py-2 border-bottom">
+                        <div>
+                            <div>{{ item.product_name }} × {{ item.quantity }}</div>
+                            {% if item.note %}<div class="small text-muted">{{ item.note }}</div>{% endif %}
+                            {% if item.salt_choice %}<div class="small text-muted">Muối: {{ item.get_salt_choice_display }}</div>{% endif %}
+                        </div>
+                        <strong class="text-nowrap">{{ item.subtotal|vnd }}</strong>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex justify-content-between mt-3 fs-5">
+                <strong>Tổng cần thanh toán khi nhận</strong>
+                <strong class="text-success">{{ order.final_total|vnd }}</strong>
+            </div>
+            <div class="text-center mt-4">
+                <a class="btn btn-success rounded-pill px-4" href="{% url 'client_home' %}">Tiếp tục xem menu</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

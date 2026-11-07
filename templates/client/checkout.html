@@ -1,0 +1,75 @@
+{% extends 'client/base_client.html' %}
+{% load currency %}
+
+{% block title %}Thông tin giao hàng - Hoa quả Sơn{% endblock %}
+
+{% block content %}
+<div class="mx-auto" style="max-width: 900px;">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold text-success mb-1"><i class="bi bi-truck me-2"></i>Thông tin giao hàng</h1>
+        <p class="text-muted mb-0">Điền thông tin để Hoa quả Sơn giao món tươi ngon đến bạn.</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <form method="post" action="{{ checkout_url }}" class="card border-0 shadow-sm">
+                {% csrf_token %}
+                <div class="position-absolute" style="left: -10000px;" aria-hidden="true">
+                    <label for="{{ form.website.id_for_label }}">Để trống mục này</label>
+                    {{ form.website }}
+                </div>
+                <div class="card-body p-3 p-md-4">
+                    {% for field in form %}
+                        {% if field.name != 'website' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+                            {{ field }}
+                            {% for error in field.errors %}
+                                <div class="small text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <div class="small text-muted mb-3">Thông tin của bạn chỉ dùng để giao hàng.</div>
+                    <div class="alert alert-success small mb-3">
+                        Thanh toán khi nhận hàng. Hoa quả Sơn sẽ liên hệ xác nhận đơn qua SĐT của bạn.
+                    </div>
+                    <button class="btn btn-success btn-lg rounded-pill w-100" type="submit">
+                        Đặt hàng · {{ final_total|vnd }}
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold">Đơn hàng của bạn</div>
+                <div class="card-body">
+                    {% for row in cart_rows %}
+                        <div class="d-flex justify-content-between gap-3 mb-3">
+                            <div>
+                                <div class="fw-semibold">{{ row.product.name }} × {{ row.quantity }}</div>
+                                {% if row.product.is_combo %}
+                                    {% for box_note in row.notes %}
+                                        {% if box_note %}<div class="small text-muted">Hộp {{ forloop.counter }}: {{ box_note }}</div>{% endif %}
+                                    {% endfor %}
+                                {% elif row.note %}
+                                    <div class="small text-muted">{{ row.note }}</div>
+                                {% endif %}
+                            </div>
+                            <strong class="text-nowrap">{{ row.line_total|vnd }}</strong>
+                        </div>
+                    {% endfor %}
+                    <div class="border-top pt-3">
+                        <div class="d-flex justify-content-between mb-2"><span>Tiền hàng</span><strong>{{ cart_subtotal|vnd }}</strong></div>
+                        <div class="d-flex justify-content-between mb-2"><span>Phí giao hàng</span><strong>{{ shipping_fee|vnd }}</strong></div>
+                        <div class="d-flex justify-content-between fs-5 mt-3"><strong>Tổng cần trả khi nhận</strong><strong class="text-success">{{ final_total|vnd }}</strong></div>
+                    </div>
+                    <a href="{% url 'customer_orders:cart' %}" class="btn btn-outline-secondary w-100 mt-3">Quay lại giỏ hàng</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

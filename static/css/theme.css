@@ -1,0 +1,217 @@
+/* ========================================================
+   BỘ MÃ MÀU CHỦ ĐẠO HỒNG DỄ THƯƠNG - HOA QUẢ SƠN
+   ======================================================== */
+:root {
+    --pink-main: #ec4899;
+    --pink-dark: #be185d;
+    --pink-light: #fce7f3;
+    --pink-bg: #fff5f9;
+    --pink-border: #fbcfe8;
+    --pink-hover: #db2777;
+    --pink-shadow: rgba(236, 72, 153, 0.12);
+
+    /* Ghi đè biến Bootstrap màu chủ đạo */
+    --bs-primary: #ec4899;
+    --bs-primary-rgb: 236, 72, 153;
+    --bs-success: #ec4899;
+    --bs-success-rgb: 236, 72, 153;
+    --bs-body-bg: var(--pink-bg);
+}
+
+/* Nền toàn trang & Font */
+body {
+    background-color: var(--pink-bg) !important;
+    color: #374151;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+}
+
+/* Thanh Navigation màu hồng */
+.navbar-custom,
+.navbar.bg-success {
+    background: linear-gradient(135deg, var(--pink-main) 0%, var(--pink-dark) 100%) !important;
+    box-shadow: 0 4px 15px rgba(190, 24, 93, 0.25) !important;
+}
+
+.navbar-brand {
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    font-size: 1.35rem;
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+.navbar-brand:hover {
+    color: #fff !important;
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+.brand-icon-box {
+    width: 34px;
+    height: 34px;
+    background: #ffffff;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover,
+.nav-link.active {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+}
+
+/* Card mềm mại với bo góc lớn và bóng đổ nhẹ */
+.card {
+    background: #ffffff !important;
+    border: 1px solid var(--pink-border) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px var(--pink-shadow) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 8px 25px rgba(236, 72, 153, 0.18) !important;
+}
+
+/* Ghi đè màu xanh lá Bootstrap sang hồng chủ đạo */
+.text-success {
+    color: var(--pink-main) !important;
+}
+
+.bg-success {
+    background-color: var(--pink-main) !important;
+}
+
+.border-success {
+    border-color: var(--pink-main) !important;
+}
+
+/* Nút bấm tông hồng */
+.btn-success,
+.btn-fruit {
+    background-color: var(--pink-main) !important;
+    border-color: var(--pink-main) !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: 0 3px 10px rgba(236, 72, 153, 0.3);
+    transition: all 0.2s ease;
+}
+
+.btn-success:hover,
+.btn-fruit:hover,
+.btn-success:focus,
+.btn-fruit:focus {
+    background-color: var(--pink-dark) !important;
+    border-color: var(--pink-dark) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(190, 24, 93, 0.35);
+}
+
+.btn-outline-success {
+    color: var(--pink-main) !important;
+    border-color: var(--pink-main) !important;
+    background-color: transparent !important;
+    font-weight: 600;
+}
+
+.btn-outline-success:hover,
+.btn-outline-success:focus {
+    color: #ffffff !important;
+    background-color: var(--pink-main) !important;
+    border-color: var(--pink-main) !important;
+}
+
+/* Badge Còn hàng màu hồng dễ thương */
+.badge.bg-success {
+    background-color: var(--pink-main) !important;
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+/* GIỮ NGUYÊN MÀU ĐỎ CHO TRẠNG THÁI HẾT HÀNG / HỦY ĐỂ RÕ RÀNG */
+.bg-danger {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+}
+
+.text-danger {
+    color: #ef4444 !important;
+}
+
+.border-danger {
+    border-color: #ef4444 !important;
+}
+
+.btn-outline-danger {
+    color: #ef4444 !important;
+    border-color: #ef4444 !important;
+}
+
+.btn-outline-danger:hover {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+}
+
+/* GIỮ NGUYÊN MÀU VÀNG CHO HỘP MIX ĐỒNG GIÁ */
+.badge-combo,
+.badge.bg-warning {
+    background-color: #f59e0b !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
+/* Form controls & inputs */
+.form-control, .form-select {
+    border-radius: 12px;
+    border: 1.5px solid var(--pink-border);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--pink-main);
+    box-shadow: 0 0 0 0.25rem rgba(236, 72, 153, 0.2);
+}
+
+.form-check-input:checked {
+    background-color: var(--pink-main) !important;
+    border-color: var(--pink-main) !important;
+}
+
+/* Khung ảnh món */
+.product-img-box {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    background-color: var(--pink-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Footer hồng nhạt */
+footer {
+    background-color: #ffffff !important;
+    border-top: 1px solid var(--pink-border) !important;
+    color: #831843 !important;
+}
+
+/* Ghi đè mọi kiểu bo góc từ Bootstrap, stylesheet riêng và style inline. */
+html body *,
+html body *::before,
+html body *::after {
+    border-radius: 0 !important;
+}

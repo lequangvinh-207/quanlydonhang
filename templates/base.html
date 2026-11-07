@@ -1,0 +1,124 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hoa quả Sơn{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Theme màu hồng chủ đạo của Hoa quả Sơn -->
+    <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=20261107-square">
+    <!-- Style cho Mascot linh vật chạy khắp màn hình -->
+    <link rel="stylesheet" href="{% static 'css/mascot.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- Header & Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success navbar-custom sticky-top">
+        <div class="container">
+            <!-- Thương hiệu Hoa quả Sơn ở góc trái, bấm về trang chủ -->
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'menu:product_list' %}">
+                <span class="brand-icon-box">
+                    <img src="{% static 'img/mascot.png' %}" alt="Hoa quả Sơn" style="width: 24px; height: 24px; object-fit: contain;">
+                </span>
+                <span>Hoa quả Sơn</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link px-3 {% if request.resolver_match.app_name == 'menu' %}active{% endif %}" href="{% url 'menu:product_list' %}">
+                            <i class="bi bi-grid-fill me-1"></i> Quản lý Menu
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3 {% if request.resolver_match.url_name == 'order_create' %}active{% endif %}" href="{% url 'orders:order_create' %}">
+                            <i class="bi bi-cart-plus-fill me-1"></i> Bán hàng (POS)
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3 {% if request.resolver_match.app_name == 'orders' and request.resolver_match.url_name != 'order_create' %}active{% endif %}" href="{% url 'orders:order_list' %}">
+                            <i class="bi bi-receipt me-1"></i> Quản lý Đơn hàng
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3 {% if request.resolver_match.app_name == 'reports' %}active{% endif %}" href="{% url 'reports:dashboard' %}">
+                            <i class="bi bi-bar-chart-line-fill me-1"></i> Báo cáo
+                        </a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/admin/" target="_blank" class="btn btn-outline-light btn-sm rounded-pill px-3 shadow-sm">
+                        <i class="bi bi-shield-lock me-1"></i> Trang Admin
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="container py-4 flex-grow-1">
+        <!-- Toast / Alerts Notification -->
+        {% if messages %}
+            <div class="row">
+                <div class="col-12">
+                    {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
+                            {% if message.tags == 'success' %}
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                            {% elif message.tags == 'error' or message.tags == 'danger' %}
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            {% else %}
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                            {% endif %}
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-3 text-center small">
+        <div class="container">
+            <span>&copy; <strong>Hoa quả Sơn</strong> - Cửa Hàng Hoa Quả Cắt Sẵn Ngọt Lành</span>
+        </div>
+    </footer>
+
+    <!-- Khung Bot Mascot chạy khắp màn hình -->
+    <div id="mascot-container">
+        <div class="mascot-wrapper mascot-idle">
+            <!-- Bong bóng thoại -->
+            <div class="mascot-bubble">Chào mừng đến Hoa quả Sơn! 🍉</div>
+            
+            <div class="mascot-body" title="Bấm vào để tương tác với bé Bot!">
+                <!-- Ảnh bot -->
+                <img src="{% static 'img/mascot.png' %}" alt="Hoa quả Sơn Mascot" class="mascot-img">
+                <!-- Bóng dưới chân -->
+                <div class="mascot-shadow"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nút bật/tắt Bot Mascot ở góc dưới màn hình -->
+    <button id="mascot-toggle-btn" class="mascot-toggle-btn" type="button" aria-label="Bật/Tắt Bot">
+        <i class="bi bi-eye-slash me-1"></i> Tắt bé Bot
+    </button>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Script Mascot linh vật di chuyển thông minh -->
+    <script src="{% static 'js/mascot.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

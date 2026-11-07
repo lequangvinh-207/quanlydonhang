@@ -1,0 +1,35 @@
+{% extends 'manager/base_manager.html' %}
+{% load currency %}
+
+{% block title %}Hủy đơn hàng #{{ order.code }} - Hoa quả Sơn{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-danger border-opacity-50">
+            <div class="card-header bg-danger text-white py-3 rounded-top-3">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận hủy đơn hàng
+                </h5>
+            </div>
+            <div class="card-body p-4 text-center">
+                <i class="bi bi-x-octagon text-danger fs-1 mb-3 d-block"></i>
+                <h5 class="fw-bold mb-2">Bạn có chắc chắn muốn hủy đơn hàng này?</h5>
+                <p class="text-secondary mb-3">
+                    Đơn hàng <strong class="text-danger fs-5">#{{ order.code }}</strong> của khách <strong>{{ order.customer_name }}</strong> (Tổng: {{ order.final_total|vnd }}) sẽ chuyển sang trạng thái "Đã hủy" và không được tính vào doanh thu.
+                </p>
+
+                <form method="post" class="d-flex justify-content-center gap-2">
+                    {% csrf_token %}
+                    <a href="{% url 'orders:order_detail' order.id %}" class="btn btn-outline-secondary rounded-pill px-4">
+                        Quay lại
+                    </a>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 shadow-sm">
+                        <i class="bi bi-trash-fill me-1"></i>Xác nhận hủy đơn
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

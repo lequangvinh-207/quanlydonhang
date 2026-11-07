@@ -1,0 +1,115 @@
+{% extends 'client/base_client.html' %}
+{% load currency %}
+
+{% block title %}Giỏ hàng - Hoa quả Sơn{% endblock %}
+
+{% block content %}
+<div class="mx-auto" style="max-width: 820px;">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold text-success mb-1"><i class="bi bi-basket3 me-2"></i>Giỏ hàng của bạn</h1>
+        <p class="text-muted mb-0">Kiểm tra món và số lượng trước khi đặt hàng.</p>
+    </div>
+
+    {% if cart_rows %}
+        <div class="d-flex flex-column gap-3">
+            {% for row in cart_rows %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        {% if row.product %}
+                            <div class="d-flex gap-3 align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">{{ row.product.name }}</div>
+                                    <div class="text-success fw-semibold">{{ row.product.price|vnd }} / hộp</div>
+                                    {% if not row.product.is_available %}
+                                        <div class="small text-danger mt-1">Món hiện đã hết hàng. Vui lòng xóa khỏi giỏ.</div>
+                                    {% endif %}
+                                    <form method="post" action="{% url 'customer_orders:cart_update' row.product.id %}" class="mt-3">
+                                        {% csrf_token %}
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-4 col-sm-3">
+                                                <label class="form-label small mb-1" for="quantity-{{ row.product.id }}">Số lượng</label>
+                                                <input class="form-control" id="quantity-{{ row.product.id }}" type="number" name="quantity" min="1" max="50" value="{{ row.quantity }}" required>
+                                            </div>
+                                            {% if row.product.is_combo %}
+                                                <div class="col-12">
+                                                    <div class="form-label small mb-1">Loại quả muốn mix (ghi riêng cho từng hộp)</div>
+                                                    <div class="d-flex flex-column gap-2">
+                                                        {% for box_note in row.notes %}
+                                                            <div>
+                                                                <label class="visually-hidden" for="note-{{ row.product.id }}-{{ forloop.counter }}">Hộp mix {{ forloop.counter }}</label>
+                                                                <input class="form-control" id="note-{{ row.product.id }}-{{ forloop.counter }}" type="text" name="notes" maxlength="255" value="{{ box_note }}" placeholder="Hộp mix {{ forloop.counter }}: chọn loại hoa quả">
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <div class="col-8 col-sm-6">
+                                                    <label class="form-label small mb-1" for="note-{{ row.product.id }}">Ghi chú món</label>
+                                                    <input class="form-control" id="note-{{ row.product.id }}" type="text" name="note" maxlength="255" value="{{ row.note }}" placeholder="Ghi chú (không bắt buộc)">
+                                                </div>
+                                            {% endif %}
+                                            <div class="col-12 col-sm-6">
+                                                <label class="form-label small mb-1" for="salt-{{ row.product.id }}">Chọn loại muối (không bắt buộc)</label>
+                                                <select class="form-select" id="salt-{{ row.product.id }}" name="salt_choice">
+                                                    <option value="" {% if not row.salt_choice %}selected{% endif %}>Không chọn muối</option>
+                                                    <option value="tay_ninh" {% if row.salt_choice == 'tay_ninh' %}selected{% endif %}>Muối Tây Ninh</option>
+                                                    <option value="hao_hao" {% if row.salt_choice == 'hao_hao' %}selected{% endif %}>Muối Hảo Hảo</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-12 col-sm-3">
+                                                <button class="btn btn-outline-success w-100" type="submit">Cập nhật</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold text-success">{{ row.line_total|vnd }}</div>
+                                    <form method="post" action="{% url 'customer_orders:cart_remove' row.product.id %}" class="mt-2">
+                                        {% csrf_token %}
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Xóa {{ row.product.name }}">
+                                            <i class="bi bi-trash"></i><span class="d-none d-sm-inline ms-1">Xóa</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="text-danger">Món không còn tồn tại trong menu.</div>
+                                <form method="post" action="{% url 'customer_orders:cart_remove' row.product_id %}">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tiền hàng</span><strong>{{ cart_subtotal|vnd }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Phí giao hàng</span><strong>{{ shipping_fee|vnd }}</strong>
+                </div>
+                <div class="d-flex justify-content-between border-top pt-3 fs-5">
+                    <strong>Tổng cần thanh toán khi nhận</strong><strong class="text-success">{{ final_total|vnd }}</strong>
+                </div>
+                <a class="btn btn-success btn-lg rounded-pill w-100 mt-3" href="{% url 'customer_orders:checkout' %}">
+                    Tiếp tục đặt hàng <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+                <a class="btn btn-link w-100 mt-1" href="{% url 'client_home' %}">Tiếp tục chọn món</a>
+            </div>
+        </div>
+    {% else %}
+        <div class="card border-0 shadow-sm text-center p-4 p-md-5">
+            <i class="bi bi-cart-x display-4 text-secondary"></i>
+            <h2 class="h5 mt-3">Giỏ hàng đang trống</h2>
+            <p class="text-muted">Chọn món yêu thích để bắt đầu đặt hàng nhé.</p>
+            <a class="btn btn-success rounded-pill mx-auto px-4" href="{% url 'client_home' %}">Xem menu</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'client/base_client.html' %}
+{% load currency %}
+
+{% block title %}Hoa quả Sơn - Menu Trái Cây Cắt Sẵn Online{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-12 text-center py-2">
+        <h2 class="fw-bold text-success mb-1">
+            <i class="bi bi-basket2-fill me-2"></i>Menu Trái Cây Tươi Ngon
+        </h2>
+        <p class="text-muted small">Cắt sẵn đóng hộp sạch sẽ &bull; Tươi ngọt mát lành &bull; Giao tận tay bạn</p>
+    </div>
+</div>
+
+<!-- Lưới hoa quả công khai -->
+<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 g-md-4">
+    {% for product in products %}
+        <div class="col">
+            <div class="card h-100 border shadow-sm">
+                <div class="product-img-box position-relative overflow-hidden" style="height: 140px; background: var(--pink-light);">
+                    {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-100 h-100" style="object-fit: cover;">
+                    {% else %}
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                            <i class="bi bi-basket2 fs-1 text-success opacity-75"></i>
+                        </div>
+                    {% endif %}
+
+                    {% if product.is_combo %}
+                        <span class="badge badge-combo position-absolute top-0 end-0 m-2 shadow-sm">
+                            Mix đồng giá
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="card-body p-3 d-flex flex-column justify-content-between">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1 text-truncate" title="{{ product.name }}">{{ product.name }}</h6>
+                        <div class="fs-5 fw-bold text-success mb-2">{{ product.price|vnd }}</div>
+                        <p class="text-muted small mb-3" style="min-height: 38px;">
+                            {{ product.description|default:"Hoa quả tươi cắt sẵn trong ngày, đóng hộp tiện lợi."|truncatewords:10 }}
+                        </p>
+                    </div>
+
+                    <form method="post" action="{% url 'customer_orders:cart_add' product.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-success btn-sm w-100 rounded-pill py-2 fw-semibold">
+                            <i class="bi bi-cart-plus me-1"></i>Thêm vào giỏ
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12 text-center py-5 text-muted">
+            <i class="bi bi-emoji-smile fs-1"></i>
+            <h5 class="mt-2">Quán đang chuẩn bị hoa quả tươi mới...</h5>
+            <p class="small">Vui lòng quay lại sau ít phút bạn nhé!</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
