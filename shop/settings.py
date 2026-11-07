@@ -1,20 +1,22 @@
 import os
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-DEBUG = os.environ.get('DEBUG', 'True').strip().lower() in {'true', '1', 'yes', 'on'}
+DEBUG = os.environ.get('DEBUG', 'False').strip().lower() in {'true', '1', 'yes', 'on'}
 SECRET_KEY = os.environ.get('SECRET_KEY', '')
 if not SECRET_KEY:
-    if not DEBUG:
+    if os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
         raise ImproperlyConfigured('SECRET_KEY must be configured when DEBUG=False.')
     SECRET_KEY = 'django-insecure-local-development-key-do-not-use-in-production'
 
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME', '').strip()
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+    for host in os.environ.get('ALLOWED_HOSTS', '').split(',')
     if host.strip()
 ]
 CSRF_TRUSTED_ORIGINS = [
@@ -22,6 +24,12 @@ CSRF_TRUSTED_ORIGINS = [
     for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
     if origin.strip()
 ]
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
+else:
+    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
+    CSRF_TRUSTED_ORIGINS.extend(['http://localhost', 'http://127.0.0.1'])
 
 # Application definition
 INSTALLED_APPS = [
@@ -69,22 +77,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'shop.wsgi.application'
 
-# SQLite local; set DATABASE_URL to use PostgreSQL in deployment.
+# SQLite local; Render uses PostgreSQL when DATABASE_URL is configured.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    import dj_database_url
-
-    DATABASES['default'] = dj_database_url.parse(
-        DATABASE_URL,
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR.as_posix()}/db.sqlite3",
         conn_max_age=600,
         conn_health_checks=True,
     )
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
